@@ -28,7 +28,6 @@ int plist_index=0;
 
 int main()
 {
-    int exit;
     bool program=true;
 
 
@@ -154,6 +153,7 @@ int main()
 
         if (pid == -1) {
             perror("FORK FAILED");
+            exit(0);
            // return;
             }
         if (pid==0){
@@ -169,7 +169,7 @@ int main()
             int num=execlp(ptoken,ptoken,NULL); //executes program
             if(num==-1){
                 perror("Error at exec: ");
-                //exit(0);
+                exit(0);
             }
 
         }
@@ -180,7 +180,7 @@ int main()
             int n = read(pipe1[0],buff,1000);
             if(n<0){
                 perror("Parent read error");
-              //  exit(0);
+                exit(0);
             }
             n=sscanf(buff,"%d",&c_pid);
             proclist[plist_index].process_id=c_pid;
