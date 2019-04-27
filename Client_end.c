@@ -31,7 +31,6 @@ typedef struct my_process {
 	bool isValid;
 	time_t startingTime;
 	time_t endingTime;
-
 } my_process;
 
 #define MAX_LIMIT 1000
@@ -71,8 +70,8 @@ int main(int argc, char * argv[]){
 
     serv_addr.sin_port = htons(portno);
 
-    // connect
-    int con = connect(sockfd,(struct sockaddr *)&+ddr, sizeof(serv_addr));
+    //connect
+    int con = connect(sockfd,(struct sockaddr *)&serv_addr, sizeof(serv_addr));
         if (con <0 ) {
             perror("Error at Connect Api ");
             exit(1);  
@@ -93,14 +92,14 @@ int main(int argc, char * argv[]){
                             // if n == 0 condition unimplemented 
                     n = write(sockfd,buff,strlen(buff)+1);      
                     if (n<0) {
-                        perror("Error Sending Data ");
+                        perror("Error at Sending Data ");
                         exit(1);   
                         }
 
                     bzero(buff,size);
                     n = read(sockfd,buff,size);
                     if (n<0) {
-                        perror("Error Receiving Data");
+                        perror("Error at Receiving Data");
                         exit(1);   
                         }
                     write(STDOUT_FILENO,buff,strlen(buff) + 1);
