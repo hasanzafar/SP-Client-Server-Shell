@@ -18,7 +18,16 @@
 #define MAXLIMIT 1000
 const int size = 1000;
 int n=0;
+
 void work(int);
+void sighandler(int signo) {
+    if (signo == SIGINT) {
+        write(STDOUT_FILENO, "\nYou pressed CTRL-C\n", sizeof("\nYou pressed CTRL-C\n"));
+    }
+    if (signo == SIGCHLD) {
+        write(STDOUT_FILENO, "\nTerminated\n", sizeof("\nTerminated\n"));
+}
+}
 
 //STRUCTURE FOR PROCESS LIST
 typedef struct pList{
@@ -32,83 +41,79 @@ struct pList proclist[MAXLIMIT];
 int plist_index=0;
 
 
-
-
 int main(int argc, char * argv[]){
 
     int sockfd, newsockfd, portno, clilen, pid;
     struct sockaddr_in serv_addr, cli_addr;
 
     if(argc <2) {
-    write(STDOUT_FILENO,"Provide Port number. It can be any number between 2000 and 65535.\n",sizeof("Provide Port number. It can be any number between 2000 and 65535.\n"));
-    exit(1);
+    write(STDOUT_FILENO,"Provide Port number\n",sizeof("Provide Port number\n"));
+    exit(0);
     }
-    // call socket api, for tcp ip connection
+    //call socket api, for tcp ip connection
     sockfd = socket(AF_INET,SOCK_STREAM,0);
         if (sockfd < 0) {
             perror("Error at Socket Api ");
-            exit(1);
+            exit(0);
         }
 
     bzero((char *)&serv_addr, sizeof(serv_addr));
     portno = atoi(argv[1]);
 
-    // populate structure
+    //populate structure
     serv_addr.sin_family = AF_INET; //tcp/ip connection
     serv_addr.sin_port = htons(portno);
     serv_addr.sin_addr.s_addr = INADDR_ANY;
 
-    // bind Api
+    //bind API to bind address to server
     int bindcheck = bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
         if (bindcheck < 0) {
             perror("Error at Bind Api ");
-            exit(1);
+            exit(0);
         }
 
-    //listen to connections. It only fails if socket fails, so no error check
+    //listen to connections. Method fails if socket fails
     listen(sockfd,5); 
     clilen = sizeof(cli_addr);
     
-    // real server code, handling multiple clients
+    signal(SIGUSR1,SIG_IGN);
+    signal(SIGCHLD, &sighandler);
+
+    // server code that deals with multiple clients
     while (1) {
         newsockfd = accept(sockfd,(struct sockaddr *)&cli_addr, &clilen);
             if (newsockfd < 0) {
                 perror("Error at Accepting Connection ");
-                exit(1);
+                exit(0);
             }
-            // accomodating multiple connections
-            
+            //fork helps establish multiple connections
             pid = fork();
                 if (pid<0){
                     perror("Error at Fork Api ");
-                    exit(1);
+                    exit(0);
                 }
-
                 if (pid == 0) {
                     close(sockfd);
                     // call main function
-                    work(newsockfd);
-                    
+                    work(newsockfd);   
                 }
                 else {
                     close(newsockfd);
                 }
-    
-    
-    
     }
     return 0;
-
-
     }
 
+
+
+//METHOD CONTAINING ALL COMMANDS
 void work(int sock){
     char buff[1000];
     char displaybuffer[1000];
     bool program=true;
     
     write(STDOUT_FILENO,"___________________________________________________\n",sizeof("___________________________________________________\n"));
-    write(STDOUT_FILENO,"Welcome! [[SP Final Project - Hasan Zafar 13105]]\nWe await your command!\nEnter 'help' for more info on how to use this.",sizeof("Welcome! [[SP Assignment 1 - Hasan Zafar 13105]]\nWe await your command!\nEnter 'help' for more info on how to use this."));
+    write(STDOUT_FILENO,"Welcome! [[SP Final Project - Hasan Zafar 13105]]\nA client has been connected. We await your command!\nEnter 'help' for more info on how to use this.",sizeof("Welcome! [[SP Final Project - Hasan Zafar 13105]]\nA client has been connected. We await your command!\nEnter 'help' for more info on how to use this."));
     char s[2000]; //Declaring array of characters (string)
     write(STDOUT_FILENO,"\n___________________________________________________\n\n",sizeof("\n___________________________________________________\n\n"));
 
@@ -117,13 +122,11 @@ void work(int sock){
         bzero(buff,1000);
         n = read(sock,buff,1000);
 
-
         if (n < 0){
             perror("Error at Reading Data ");
-            exit(1);
+            exit(0);
             }
         write(STDOUT_FILENO,buff,strlen(buff) +1);
-
 
         //User will input string to be tokenized and then executed
         char str[n - 1];
@@ -140,7 +143,6 @@ void work(int sock){
         char* list="list";
         char* help="help";
         //char* kill="kill";
-        char* Exit="terminate";
 
         //Using strtok to divide words/numbers into tokens by the spaces to differentiate between them
         point=strtok(str," ");
@@ -148,7 +150,7 @@ void work(int sock){
 
 
 
-        //ADD FUNCTIONALITY
+        //ADD
         int sum=0;
         if(strcmp(num1,add)==0){ //compared first token with add, if it is add, then statements will execute
             while (point!=NULL){
@@ -198,7 +200,7 @@ void work(int sock){
         char a[100];
         int n=sprintf(a,"%d\n",res); //sprintf formats output and stores to string
         int num=write(sock,a,n);
-    }
+        }
 
 
 
@@ -233,13 +235,13 @@ void work(int sock){
             char* ptoken=point;//goes to next token, stores it in variable. used to run process
             sprintf(procname,"%s",point);
 
-            if (pid == -1) {
+            if (pid <0) {
                 perror("FORK FAILED");
                 exit(0);
             // return;
             }
-            if (pid==0){
             //child process
+            if (pid==0){
                 close(pipe1[0]);
                 char cpid[12]={0x0};
                 
@@ -248,14 +250,14 @@ void work(int sock){
                 write(pipe1[1],cpid,n);
                 //write(sock,"CHILD ID: ",sizeof("CHILD ID: "));
                 //write(sock,cpid,sizeof(cpid));
-                write(sock,"\n",sizeof("\n"));
+                write(sock,"success\n",sizeof("success\n"));
                 int num=execlp(ptoken,ptoken,NULL); //executes program
                 if(num==-1){
                     perror("Error at exec: ");
                     exit(0);
                 }
             }
-            //parent
+            //parent process
             else{
                 close(pipe1[1]);
                 int c_pid;
@@ -290,14 +292,17 @@ void work(int sock){
                 char etime[9];
                 strftime(stime,9,"%X",gmtime(&proclist[i].startTime));
                 strftime(etime,9,"%X",gmtime(&proclist[i].endTime));
+                if(proclist[plist_index].isActive=true){
                 y=sprintf(buffz,"%s\t\t%d\t\t%d\t\t%s\t%s\n",proclist[i].processName,proclist[i].process_id,proclist[i].isActive,stime,etime);
                 strcat(buffer,buffz);
                 total +=y;
+                }
             }
             write(sock,buffer,total);
         }
 
 
+        //KILL function
         if(strcmp(num1,"kill")==0){
             char buff[1000];
             int n;
@@ -305,8 +310,19 @@ void work(int sock){
             int kpid = atoi(point);
             int ret = kill(kpid,SIGKILL);
             if(ret<0){
-                n = sprintf(buff,"Kill Process Unsuccessful\n");
+                if (errno == ESRCH) {
+				n = sprintf(buff, "Invalid pid, Kill Unsuccessful\n");
+				write(sock, buff, n);
+				return;
+			} else if (errno == EPERM) {
+				n = sprintf(buff, "Not permitted to kill. Kill unsucessful\n");
+				write(sock, buff, n);
+				return;
+			}
+            else{
+            n = sprintf(buff,"Kill Process Unsuccessful\n");
                 write(sock,buff,n);
+            }
             }
             for(int i=0; i<plist_index;i++){
                 if(proclist[i].process_id == kpid){
@@ -330,15 +346,18 @@ void work(int sock){
 
 
         //EXIT function
-        if(strcmp(num1,Exit)==0){
+        if(strcmp(num1,"exit")==0){
             n = sprintf(buff, "Client has Exited\n");
             write(sock, buff, n);
             program=false;
+            break;
             exit(0); // break;
         }
 
 
-        else{
+        
+        //NO OPERATION
+        if((strcmp(num1,add)!=0)&&(strcmp(num1,sub)!=0)&&(strcmp(num1,mul)!=0)&&(strcmp(num1,div)!=0)&&(strcmp(num1,run)!=0)&&(strcmp(num1,list)!=0)&&(strcmp(num1,help)!=0)&&(strcmp(num1,"kill")!=0)&&(strcmp(num1,"exit")!=0)){
             char buff[1000];
             int n = sprintf(buff,"Incorrect operation");
         }
@@ -347,4 +366,3 @@ void work(int sock){
 
     } //End of program loop
 } //End of main method
-
