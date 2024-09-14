@@ -1,2 +1,2 @@
 # SP-Project
-Sir Shabbir Mukhi's SP Client-Server Shell.
+Professor Mukhi's SP Project: Client-Server Shell.
